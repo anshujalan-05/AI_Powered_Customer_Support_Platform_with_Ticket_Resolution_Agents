@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SupportPilot</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 18px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        textarea {
+            height: 120px;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            background: #222;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 8px;
+        }
+
+        .result p {
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>SupportPilot</h1>
+    <p style="text-align:center;">
+        AI Ticket Resolution Agent
+    </p>
+
+    <form method="POST">
+
+        <label>Employee Name</label>
+        <input type="text" name="employee_name" required>
+
+        <label>Email</label>
+        <input type="email" name="email" required>
+
+        <label>Ticket Title</label>
+        <input type="text" name="title" required>
+
+        <label>Ticket Description</label>
+        <textarea name="description" required></textarea>
+
+        <label>Department</label>
+        <select name="department">
+            <option>IT</option>
+            <option>HR</option>
+            <option>Finance</option>
+            <option>Sales</option>
+            <option>Marketing</option>
+        </select>
+
+        <button type="submit">SUBMIT TICKET</button>
+
+    </form>
+
+
+    {% if result %}
+
+    <div class="result">
+
+        <h2>Ticket Analysis</h2>
+
+        <p><b>Employee:</b> {{ result.employee_name }}</p>
+
+        <p><b>Category:</b> {{ result.category }}</p>
+
+        <p><b>Severity:</b> {{ result.severity }}</p>
+
+        <p><b>Priority:</b> {{ result.priority }}</p>
+
+        <p><b>Confidence:</b> {{ result.confidence }}%</p>
+
+        <p><b>Status:</b> {{ result.status }}</p>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>
