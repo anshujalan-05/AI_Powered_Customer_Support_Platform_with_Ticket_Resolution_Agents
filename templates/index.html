@@ -1,126 +1,767 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>SupportPilot</title>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SupportPilot - AI Ticket Resolution</title>
 
     <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Arial, sans-serif;
             background: #f4f6f8;
             margin: 0;
-            padding: 40px;
+            padding: 0;
+            color: #222;
         }
 
         .container {
-            max-width: 700px;
-            margin: auto;
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 85%;
+            max-width: 1100px;
+            margin: 40px auto;
         }
 
         h1 {
             text-align: center;
+            font-size: 36px;
+            margin-bottom: 10px;
         }
 
-        input, textarea, select {
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        h3 {
+            margin-top: 25px;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            font-weight: bold;
+        }
+
+        input,
+        textarea,
+        select {
             width: 100%;
             padding: 12px;
-            margin: 8px 0 18px;
-            box-sizing: border-box;
+            margin-top: 7px;
             border: 1px solid #ccc;
-            border-radius: 6px;
+            border-radius: 7px;
+            font-size: 15px;
         }
 
         textarea {
-            height: 120px;
+            height: 130px;
+            resize: vertical;
         }
 
         button {
+            margin-top: 25px;
             width: 100%;
             padding: 13px;
+            border: none;
+            border-radius: 7px;
             background: #222;
             color: white;
-            border: none;
-            border-radius: 6px;
+            font-size: 16px;
             cursor: pointer;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        .result-item {
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
             font-size: 16px;
         }
 
-        .result {
-            margin-top: 25px;
+        .resolution {
+            margin-top: 15px;
             padding: 20px;
-            background: #f0f7ff;
+            background: #f7f7f7;
+            border-left: 5px solid #222;
+            white-space: pre-line;
+            line-height: 1.7;
+            border-radius: 5px;
+        }
+
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(200px, 1fr)
+            );
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .agent-card {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .agent-card h3 {
+            margin-top: 0;
+            font-size: 17px;
+        }
+
+        .agent-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .auto-resolve {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .escalate {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 7px;
+            margin-top: 20px;
+        }
+
+        .kb-card {
+            margin-top: 15px;
+            padding: 18px;
+            background: #fafafa;
+            border: 1px solid #ddd;
             border-radius: 8px;
         }
 
-        .result p {
-            font-size: 16px;
+        .kb-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
         }
+
+        .kb-info {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .kb-content {
+            line-height: 1.6;
+        }
+
+        .steps {
+            line-height: 1.8;
+            padding-left: 25px;
+        }
+
+        .escalation-message {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+            line-height: 1.6;
+        }
+
+        .dashboard-link {
+            display: block;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .dashboard-link a {
+            text-decoration: none;
+            color: #222;
+            font-weight: bold;
+            font-size: 17px;
+        }
+
+        .dashboard-link a:hover {
+            text-decoration: underline;
+        }
+
     </style>
+
 </head>
+
 
 <body>
 
 <div class="container">
 
+
+    <!-- =====================================
+         PAGE HEADER
+         ===================================== -->
+
     <h1>SupportPilot</h1>
-    <p style="text-align:center;">
-        AI Ticket Resolution Agent
-    </p>
 
-    <form method="POST">
+    <div class="subtitle">
 
-        <label>Employee Name</label>
-        <input type="text" name="employee_name" required>
+        AI-Powered IT Support Ticket Resolution Agent
 
-        <label>Email</label>
-        <input type="email" name="email" required>
-
-        <label>Ticket Title</label>
-        <input type="text" name="title" required>
-
-        <label>Ticket Description</label>
-        <textarea name="description" required></textarea>
-
-        <label>Department</label>
-        <select name="department">
-            <option>IT</option>
-            <option>HR</option>
-            <option>Finance</option>
-            <option>Sales</option>
-            <option>Marketing</option>
-        </select>
-
-        <button type="submit">SUBMIT TICKET</button>
-
-    </form>
+    </div>
 
 
-    {% if result %}
 
-    <div class="result">
+    <!-- =====================================
+         ERROR MESSAGE
+         ===================================== -->
 
-        <h2>Ticket Analysis</h2>
+    {% if result and result.get("error") %}
 
-        <p><b>Employee:</b> {{ result.employee_name }}</p>
+    <div class="card">
 
-        <p><b>Category:</b> {{ result.category }}</p>
+        <div class="error">
 
-        <p><b>Severity:</b> {{ result.severity }}</p>
+            {{ result.get("error") }}
 
-        <p><b>Priority:</b> {{ result.priority }}</p>
-
-        <p><b>Confidence:</b> {{ result.confidence }}%</p>
-
-        <p><b>Status:</b> {{ result.status }}</p>
+        </div>
 
     </div>
 
     {% endif %}
 
+
+
+    <!-- =====================================
+         TICKET FORM
+         ===================================== -->
+
+    <div class="card">
+
+        <h2>Submit Support Ticket</h2>
+
+
+        <form method="POST">
+
+
+            <label>Employee Name</label>
+
+            <input
+                type="text"
+                name="employee_name"
+                placeholder="Enter employee name"
+                required
+            >
+
+
+
+            <label>Email</label>
+
+            <input
+                type="email"
+                name="email"
+                placeholder="Enter email address"
+                required
+            >
+
+
+
+            <label>Ticket Title</label>
+
+            <input
+                type="text"
+                name="title"
+                placeholder="Example: VPN is not connecting"
+                required
+            >
+
+
+
+            <label>Description</label>
+
+            <textarea
+                name="description"
+                placeholder="Describe your problem..."
+                required
+            ></textarea>
+
+
+
+            <label>Department</label>
+
+            <select name="department" required>
+
+                <option value="">
+
+                    Select Department
+
+                </option>
+
+                <option value="IT">
+
+                    IT
+
+                </option>
+
+                <option value="HR">
+
+                    HR
+
+                </option>
+
+                <option value="Finance">
+
+                    Finance
+
+                </option>
+
+                <option value="Operations">
+
+                    Operations
+
+                </option>
+
+            </select>
+
+
+
+            <button type="submit">
+
+                Submit Ticket
+
+            </button>
+
+
+        </form>
+
+    </div>
+
+
+
+    <!-- =====================================
+         AI RESULT
+         ===================================== -->
+
+    {% if result and result.get("category") %}
+
+    <div class="card">
+
+
+        <h2>AI Ticket Analysis</h2>
+
+
+
+        <div class="result-item">
+
+            <strong>Category:</strong>
+
+            {{ result.get("category", "N/A") }}
+
+        </div>
+
+
+
+        <div class="result-item">
+
+            <strong>Severity:</strong>
+
+            {{ result.get("severity", "N/A") }}
+
+        </div>
+
+
+
+        <div class="result-item">
+
+            <strong>Priority:</strong>
+
+            {{ result.get("priority", "N/A") }}
+
+        </div>
+
+
+
+        <div class="result-item">
+
+            <strong>ML Confidence:</strong>
+
+            {{ result.get("confidence", 0) }}%
+
+        </div>
+
+
+
+        <div class="result-item">
+
+            <strong>Ticket Status:</strong>
+
+            {{ result.get("status", "Open") }}
+
+        </div>
+
+
+
+        <!-- =====================================
+             MULTI-AGENT RESOLUTION REPORT
+             ===================================== -->
+
+        {% if result.get("validation") %}
+
+        <h2 style="margin-top: 35px;">
+
+            Multi-Agent Resolution Report
+
+        </h2>
+
+
+
+        <div class="agent-grid">
+
+
+            <!-- Diagnosis Agent -->
+
+            <div class="agent-card">
+
+                <h3>Diagnosis Agent</h3>
+
+                <div class="agent-value">
+
+                    {{ result["diagnosis"].get(
+                        "category",
+                        "N/A"
+                    ) }}
+
+                </div>
+
+                <p>
+
+                    Identified Issue Category
+
+                </p>
+
+            </div>
+
+
+
+            <!-- Diagnosis Confidence -->
+
+            <div class="agent-card">
+
+                <h3>Diagnosis Confidence</h3>
+
+                <div class="agent-value">
+
+                    {{ result["validation"].get(
+                        "diagnosis_confidence",
+                        0
+                    ) }}%
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Retrieval Similarity -->
+
+            <div class="agent-card">
+
+                <h3>Retrieval Similarity</h3>
+
+                <div class="agent-value">
+
+                    {{ result["validation"].get(
+                        "retrieval_similarity",
+                        0
+                    ) }}%
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Step Completeness -->
+
+            <div class="agent-card">
+
+                <h3>Step Completeness</h3>
+
+                <div class="agent-value">
+
+                    {{ result["validation"].get(
+                        "step_completeness",
+                        0
+                    ) }}%
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Final Confidence -->
+
+            <div class="agent-card">
+
+                <h3>Final Confidence</h3>
+
+                <div class="agent-value">
+
+                    {{ result["validation"].get(
+                        "final_confidence",
+                        0
+                    ) }}%
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             VALIDATION STATUS
+             ===================================== -->
+
+        <h3>Validation Status</h3>
+
+
+        {% if result["validation"].get("status") == "AUTO_RESOLVE" %}
+
+        <div class="status auto-resolve">
+
+            AUTO RESOLVE
+
+        </div>
+
+        {% else %}
+
+        <div class="status escalate">
+
+            ESCALATE
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- =====================================
+             ESCALATION MESSAGE
+             ===================================== -->
+
+        {% if result["escalation"].get("required") %}
+
+        <div class="escalation-message">
+
+            <strong>Manual Review Required</strong>
+
+            <p>
+
+                {{ result["escalation"].get(
+                    "message",
+                    "This ticket requires manual review."
+                ) }}
+
+            </p>
+
+        </div>
+
+        {% endif %}
+
+
+
+        <!-- =====================================
+             RETRIEVAL AGENT
+             ===================================== -->
+
+        <h2 style="margin-top: 35px;">
+
+            Retrieval Agent
+
+        </h2>
+
+
+        {% if result["retrieval"].get("article") %}
+
+        <div class="kb-card">
+
+
+            <div class="kb-title">
+
+                {{ result["retrieval"]["article"].get(
+                    "title",
+                    "Knowledge Article"
+                ) }}
+
+            </div>
+
+
+
+            <div class="kb-info">
+
+                <strong>ID:</strong>
+
+                {{ result["retrieval"]["article"].get(
+                    "id",
+                    "N/A"
+                ) }}
+
+
+                &nbsp; | &nbsp;
+
+
+                <strong>Similarity:</strong>
+
+                {{ result["validation"].get(
+                    "retrieval_similarity",
+                    0
+                ) }}%
+
+            </div>
+
+
+
+            <div class="kb-content">
+
+                {{ result["retrieval"]["article"].get(
+                    "content",
+                    "No content available."
+                ) }}
+
+            </div>
+
+
+        </div>
+
+        {% else %}
+
+        <p>
+
+            No relevant knowledge article found.
+
+        </p>
+
+        {% endif %}
+
+
+
+        <!-- =====================================
+             RESOLUTION AGENT
+             ===================================== -->
+
+        <h2 style="margin-top: 35px;">
+
+            AI Recommended Resolution
+
+        </h2>
+
+
+
+        <div class="resolution">
+
+            {{ result["resolution_result"].get(
+                "response",
+                "No resolution generated."
+            ) }}
+
+        </div>
+
+
+
+        <!-- =====================================
+             TROUBLESHOOTING STEPS
+             ===================================== -->
+
+        {% if result["resolution_result"].get("steps") %}
+
+        <h3>
+
+            Troubleshooting Steps
+
+        </h3>
+
+
+        <ol class="steps">
+
+            {% for step in result["resolution_result"]["steps"] %}
+
+            <li>
+
+                {{ step }}
+
+            </li>
+
+            {% endfor %}
+
+        </ol>
+
+        {% endif %}
+
+
+
+        {% endif %}
+
+
+    </div>
+
+    {% endif %}
+
+
+
+    <!-- =====================================
+         DASHBOARD LINK
+         ===================================== -->
+
+    <div class="dashboard-link">
+
+        <a href="{{ url_for('dashboard') }}">
+
+            Go to SupportPilot Dashboard →
+
+        </a>
+
+    </div>
+
+
 </div>
 
 </body>
+
 </html>

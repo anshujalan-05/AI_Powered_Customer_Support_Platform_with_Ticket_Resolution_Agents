@@ -1,18 +1,7 @@
-
-from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    make_response
-)
-
+from flask import Flask, render_template, request, redirect, url_for, make_response
 from functools import wraps
-from datetime import datetime, timedelta
-
 import jwt
-from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 from classifier import process_ticket
 
@@ -28,38 +17,27 @@ from rag_pipeline import run_rag_pipeline
 from retriever import KnowledgeRetriever
 from knowledge_base import knowledge_base
 
-from agents import SupportPilot
-from jira_service import create_jira_ticket
-from email_service import send_ticket_email
-
-
-# ==========================================
-# LOAD ENVIRONMENT VARIABLES
-# ==========================================
-
-load_dotenv()
-
-
-# ==========================================
-# FLASK APP
-# ==========================================
 
 app = Flask(__name__)
 
 
-# ==========================================
+# =========================================================
 # DATABASE
-# ==========================================
+# =========================================================
 
 create_database()
 
 
-# ==========================================
-# JWT CONFIGURATION
-# ==========================================
+# =========================================================
+# JWT SECRET KEY
+# =========================================================
 
-SECRET_KEY = "SupportPilot-JWT-Secret-Key-2026-Secure"
+SECRET_KEY = "supportpilot-secret-key-2026-super-secret"
 
+
+# =========================================================
+# CREATE JWT TOKEN
+# =========================================================
 
 def create_token(username):
 
@@ -77,6 +55,10 @@ def create_token(username):
     return token
 
 
+# =========================================================
+# JWT PROTECTION
+# =========================================================
+
 def token_required(view_function):
 
     @wraps(view_function)
@@ -84,8 +66,8 @@ def token_required(view_function):
 
         token = request.cookies.get("access_token")
 
+        # No token
         if not token:
-
             return redirect(url_for("login"))
 
         try:
@@ -121,9 +103,9 @@ def token_required(view_function):
     return decorated_function
 
 
-# ==========================================
+# =========================================================
 # LOGIN
-# ==========================================
+# =========================================================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -139,6 +121,9 @@ def login():
             "password",
             ""
         ).strip()
+
+        # College demo:
+        # Any non-empty username and password are accepted
 
         if username and password:
 
@@ -160,9 +145,9 @@ def login():
     return render_template("login.html")
 
 
-# ==========================================
+# =========================================================
 # LOGOUT
-# ==========================================
+# =========================================================
 
 @app.route("/logout")
 def logout():
@@ -176,9 +161,9 @@ def logout():
     return response
 
 
-# ==========================================
-# HOME / TICKET SUBMISSION
-# ==========================================
+# =========================================================
+# HOME / NEW TICKET
+# =========================================================
 
 @app.route("/", methods=["GET", "POST"])
 @token_required
@@ -193,33 +178,32 @@ def home():
             "employee_name": request.form.get(
                 "employee_name",
                 ""
-            ).strip(),
+            ),
 
             "email": request.form.get(
                 "email",
                 ""
-            ).strip(),
+            ),
 
             "title": request.form.get(
                 "title",
                 ""
-            ).strip(),
+            ),
 
             "description": request.form.get(
                 "description",
                 ""
-            ).strip(),
+            ),
 
             "department": request.form.get(
                 "department",
                 ""
-            ).strip()
-
+            )
         }
 
-        # ==========================================
-        # CLASSIFIER
-        # ==========================================
+        # =================================================
+        # ML CLASSIFICATION
+        # =================================================
 
         category, severity, priority, confidence = process_ticket(
             data["description"],
@@ -227,117 +211,51 @@ def home():
         )
 
         data["category"] = category
-
         data["severity"] = severity
-
         data["priority"] = priority
-
         data["confidence"] = confidence
-
         data["status"] = "Open"
 
 
-        # ==========================================
-        # MULTI-AGENT PROCESSING
-        # ==========================================
+        # =================================================
+        # RAG PIPELINE
+        # =================================================
 
-        support_pilot = SupportPilot()
+        ticket = {
 
-        agent_result = support_pilot.process_ticket(
-            data["description"]
-        )
+            "id": "TEMP",
 
-        diagnosis_result = agent_result.get(
-            "diagnosis",
-            {}
-        )
+            "title": data["title"],
 
-        retrieval_result = agent_result.get(
-            "retrieval",
-            {}
-        )
+            "description": data["description"],
 
-        resolution_result = agent_result.get(
+            "category": data["category"],
+
+            "severity": data["severity"],
+
+            "priority": data["priority"],
+
+            "confidence": data["confidence"]
+
+        }
+
+        rag_result = run_rag_pipeline(ticket)
+
+
+        data["resolution"] = rag_result.get(
             "resolution",
-            {}
-        )
-
-        validation_result = agent_result.get(
-            "validation",
-            {}
-        )
-
-        escalation_result = agent_result.get(
-            "escalation",
-            {}
-        )
-
-
-        # ==========================================
-        # AI RESOLUTION
-        # ==========================================
-
-        generated_resolution = resolution_result.get(
-            "response",
             "No resolution generated."
         )
 
-        data["resolution"] = generated_resolution
 
-
-        # ==========================================
-        # STATUS BASED ON VALIDATION
-        # ==========================================
-
-        if validation_result.get("status") == "ESCALATE":
-
-            data["status"] = "Open"
-
-        else:
-
-            data["status"] = "In Progress"
-
-
-        # ==========================================
-        # SAVE TICKET IN DATABASE
-        # ==========================================
+        # =================================================
+        # SAVE TICKET
+        # =================================================
 
         save_ticket(data)
 
+        result = data
 
-        # ==========================================
-        # SEND EMAIL NOTIFICATION
-        # ==========================================
-
-        email_result = send_ticket_email(
-            data
-        )
-
-        print("Email Result:", email_result, flush=True)
-
-        # ==========================================
-        # DISPLAY RESULT
-        # ==========================================
-
-        result = {
-
-            **data,
-
-            "agent_result": agent_result,
-
-            "diagnosis": diagnosis_result,
-
-            "retrieval": retrieval_result,
-
-            "resolution_result": resolution_result,
-
-            "validation": validation_result,
-
-            "escalation": escalation_result,
-
-            "email_result": email_result
-
-        }
 
     return render_template(
         "index.html",
@@ -345,15 +263,20 @@ def home():
     )
 
 
-# ==========================================
+# =========================================================
 # DASHBOARD
-# ==========================================
+# =========================================================
 
 @app.route("/dashboard")
 @token_required
 def dashboard():
 
     tickets = get_tickets()
+
+
+    # =================================================
+    # SEARCH / FILTER
+    # =================================================
 
     search = request.args.get(
         "search",
@@ -375,104 +298,111 @@ def dashboard():
         ""
     )
 
+
     filtered_tickets = []
+
 
     for ticket in tickets:
 
         text = (
-
-            str(ticket["title"])
-            + " "
-            + str(ticket["description"])
-            + " "
-            + str(ticket["employee_name"])
-
+            str(ticket["title"]) +
+            " " +
+            str(ticket["description"]) +
+            " " +
+            str(ticket["employee_name"])
         ).lower()
 
+
         if search and search not in text:
-
             continue
+
 
         if (
-            status_filter
-            and ticket["status"] != status_filter
+            status_filter and
+            ticket["status"] != status_filter
         ):
-
             continue
+
 
         if (
-            priority_filter
-            and ticket["priority"] != priority_filter
+            priority_filter and
+            ticket["priority"] != priority_filter
         ):
-
             continue
+
 
         if (
-            category_filter
-            and ticket["category"] != category_filter
+            category_filter and
+            ticket["category"] != category_filter
         ):
-
             continue
+
 
         filtered_tickets.append(ticket)
 
 
-    # ==========================================
-    # DASHBOARD STATISTICS
-    # ==========================================
+    # =================================================
+    # STATISTICS
+    # =================================================
 
     total = len(tickets)
 
-    open_tickets = sum(
 
+    open_tickets = sum(
         1
         for ticket in tickets
         if ticket["status"] == "Open"
-
     )
 
-    high_priority = sum(
 
+    high_priority = sum(
         1
         for ticket in tickets
         if ticket["priority"] == "P1"
-
     )
 
-    resolved_tickets = sum(
 
+    resolved_tickets = sum(
         1
         for ticket in tickets
         if ticket["status"] == "Resolved"
-
     )
 
 
-    # ==========================================
+    # =================================================
     # CHART DATA
-    # ==========================================
+    # =================================================
 
     status_data = {
 
         "Open": 0,
+
         "In Progress": 0,
+
         "Resolved": 0
 
     }
 
+
     priority_data = {
 
         "P1": 0,
+
         "P2": 0,
+
         "P3": 0,
+
         "P4": 0
 
     }
+
 
     category_data = {}
 
 
     for ticket in tickets:
+
+        # Status
 
         status = ticket["status"]
 
@@ -483,6 +413,8 @@ def dashboard():
         status_data[status] += 1
 
 
+        # Priority
+
         priority = ticket["priority"]
 
         if priority not in priority_data:
@@ -491,6 +423,8 @@ def dashboard():
 
         priority_data[priority] += 1
 
+
+        # Category
 
         category = ticket["category"]
 
@@ -501,13 +435,14 @@ def dashboard():
         category_data[category] += 1
 
 
-    # ==========================================
-    # RETRIEVED DOCUMENTS
-    # ==========================================
+    # =================================================
+    # KNOWLEDGE RETRIEVER
+    # =================================================
 
     retriever = KnowledgeRetriever(
         knowledge_base
     )
+
 
     ticket_data = []
 
@@ -515,17 +450,17 @@ def dashboard():
     for ticket in filtered_tickets:
 
         query = (
-
-            str(ticket["title"])
-            + " "
-            + str(ticket["description"])
-
+            str(ticket["title"]) +
+            " " +
+            str(ticket["description"])
         )
+
 
         retrieved_docs = retriever.search(
             query,
             top_k=3
         )
+
 
         ticket_data.append({
 
@@ -535,6 +470,10 @@ def dashboard():
 
         })
 
+
+    # =================================================
+    # RENDER DASHBOARD
+    # =================================================
 
     return render_template(
 
@@ -567,9 +506,9 @@ def dashboard():
     )
 
 
-# ==========================================
+# =========================================================
 # TICKET DETAILS
-# ==========================================
+# =========================================================
 
 @app.route("/ticket/<int:ticket_id>")
 @token_required
@@ -577,26 +516,44 @@ def ticket_details(ticket_id):
 
     ticket = get_ticket(ticket_id)
 
+
     if ticket is None:
 
         return "Ticket not found", 404
+
+
+    # =================================================
+    # RETRIEVE KNOWLEDGE BASE
+    # =================================================
 
     retriever = KnowledgeRetriever(
         knowledge_base
     )
 
+
     query = (
 
-        str(ticket["title"])
-        + " "
-        + str(ticket["description"])
+        str(ticket["title"]) +
+
+        " " +
+
+        str(ticket["description"])
 
     )
+
 
     retrieved_docs = retriever.search(
+
         query,
+
         top_k=3
+
     )
+
+
+    # =================================================
+    # RENDER TICKET DETAILS
+    # =================================================
 
     return render_template(
 
@@ -609,16 +566,13 @@ def ticket_details(ticket_id):
     )
 
 
-# ==========================================
+# =========================================================
 # UPDATE TICKET STATUS
-# ==========================================
+# =========================================================
 
 @app.route(
-
     "/ticket/<int:ticket_id>/status",
-
     methods=["POST"]
-
 )
 @token_required
 def update_status(ticket_id):
@@ -628,23 +582,32 @@ def update_status(ticket_id):
         ""
     )
 
+
     allowed_statuses = [
 
         "Open",
+
         "In Progress",
+
         "Resolved"
 
     ]
+
 
     if new_status not in allowed_statuses:
 
         return "Invalid status", 400
 
+
+    # Check ticket exists
+
     ticket = get_ticket(ticket_id)
+
 
     if ticket is None:
 
         return "Ticket not found", 404
+
 
     update_ticket_status(
 
@@ -653,6 +616,7 @@ def update_status(ticket_id):
         new_status
 
     )
+
 
     return redirect(
 
@@ -667,74 +631,9 @@ def update_status(ticket_id):
     )
 
 
-# ==========================================
-# CREATE JIRA TICKET
-# ==========================================
-
-@app.route(
-
-    "/ticket/<int:ticket_id>/create-jira",
-
-    methods=["POST"]
-
-)
-@token_required
-def create_jira(ticket_id):
-
-    ticket = get_ticket(ticket_id)
-
-    if ticket is None:
-
-        return "Ticket not found", 404
-
-    # Convert sqlite Row into a normal dictionary
-
-    ticket_data = dict(ticket)
-
-    jira_result = create_jira_ticket(
-
-        ticket_data
-
-    )
-
-    if jira_result.get("success"):
-
-        return (
-
-            f"Jira ticket created successfully. "
-
-            f"Jira ID: {jira_result.get('ticket_id')}"
-
-        )
-
-    return (
-
-        f"Jira ticket creation failed: "
-
-        f"{jira_result.get('message')}"
-
-    ), 500
-
-
-# ==========================================
-# HEALTH CHECK
-# ==========================================
-
-@app.route("/health")
-def health():
-
-    return {
-
-        "status": "success",
-
-        "message": "SupportPilot is running"
-
-    }
-
-
-# ==========================================
+# =========================================================
 # RUN APPLICATION
-# ==========================================
+# =========================================================
 
 if __name__ == "__main__":
 
@@ -744,6 +643,6 @@ if __name__ == "__main__":
 
         port=5000,
 
-        debug=False
+        debug=True
 
     )

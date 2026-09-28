@@ -1,0 +1,33 @@
+
+[
+  {
+    "id": "KB001",
+    "title": "VPN Connection Troubleshooting",
+    "category": "Network",
+    "content": "Check your internet connection. Restart the VPN client. Verify your username and password. Clear the VPN cache. Restart your computer. Check firewall and network configuration."
+  },
+  {
+    "id": "KB002",
+    "title": "Password Reset Guide",
+    "category": "Authentication",
+    "content": "Open the company password portal. Click on Forgot Password. Verify your identity. Create a new password. Confirm the new password. Try logging in again."
+  },
+  {
+    "id": "KB003",
+    "title": "Email Not Working",
+    "category": "Email",
+    "content": "Check your internet connection. Check mailbox storage. Restart Outlook. Remove and re-add the email account. Verify email server settings."
+  },
+  {
+    "id": "KB004",
+    "title": "Printer Not Printing",
+    "category": "Printer",
+    "content": "Check whether the printer is powered on. Verify the printer connection. Check the paper and ink. Clear pending print jobs. Restart the printer and computer."
+  },
+  {
+    "id": "KB005",
+    "title": "Slow Computer Troubleshooting",
+    "category": "Performance",
+    "content": "Restart the computer. Close unnecessary applications. Check CPU and memory usage. Remove temporary files. Scan the computer for malware. Update system software."
+  }
+]
